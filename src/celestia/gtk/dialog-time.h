@@ -23,6 +23,6 @@ void dialogSetTime(AppData* app);
 
 
 /* Labels for TimeZone dropdown */
-static const char* timeOptions[] = { "UTC", "Local", NULL };
+static const char* timeOptions[] = { N_("UTC"), N_("Local"), NULL };
 
 #endif /* GTK_DIALOG_TIME_H */

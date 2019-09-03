@@ -83,11 +83,11 @@ static gboolean noSplash = FALSE;
 /* Command-Line Options specification */
 static GOptionEntry optionEntries[] =
 {
-	{ "conf", 'c', 0, G_OPTION_ARG_FILENAME, &configFile, "Alternate configuration file", "file" },
-	{ "dir", 'd', 0, G_OPTION_ARG_FILENAME, &installDir, "Alternate installation directory", "directory" },
-	{ "extrasdir", 'e', 0, G_OPTION_ARG_FILENAME_ARRAY, &extrasDir, "Additional \"extras\" directory", "directory" },
-	{ "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &fullScreen, "Start full-screen", NULL },
-	{ "nosplash", 's', 0, G_OPTION_ARG_NONE, &noSplash, "Disable splash screen", NULL },
+	{ "conf", 'c', 0, G_OPTION_ARG_FILENAME, &configFile, N_("Alternate configuration file"), N_("file") },
+	{ "dir", 'd', 0, G_OPTION_ARG_FILENAME, &installDir, N_("Alternate installation directory"), N_("directory") },
+	{ "extrasdir", 'e', 0, G_OPTION_ARG_FILENAME_ARRAY, &extrasDir, N_("Additional \"extras\" directory"), N_("directory") },
+	{ "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &fullScreen, N_("Start full-screen"), NULL },
+	{ "nosplash", 's', 0, G_OPTION_ARG_NONE, &noSplash, N_("Disable splash screen"), NULL },
 	{ NULL },
 };
 
@@ -100,12 +100,19 @@ static void createMainMenu(GtkWidget* window, AppData* app)
 	GError *error;
 	
 	app->agMain = gtk_action_group_new ("MenuActions");
+	gtk_action_group_set_translation_domain(app->agMain, PACKAGE);
 	app->agRender = gtk_action_group_new("RenderActions");
+	gtk_action_group_set_translation_domain(app->agRender, PACKAGE);
 	app->agLabel = gtk_action_group_new("LabelActions");
+	gtk_action_group_set_translation_domain(app->agLabel, PACKAGE);
 	app->agOrbit = gtk_action_group_new("OrbitActions");
+	gtk_action_group_set_translation_domain(app->agOrbit, PACKAGE);
 	app->agVerbosity = gtk_action_group_new("VerbosityActions");
+	gtk_action_group_set_translation_domain(app->agVerbosity, PACKAGE);
 	app->agStarStyle = gtk_action_group_new("StarStyleActions");
+	gtk_action_group_set_translation_domain(app->agStarStyle, PACKAGE);
 	app->agAmbient = gtk_action_group_new("AmbientActions");
+	gtk_action_group_set_translation_domain(app->agAmbient, PACKAGE);
 	
 	/* All actions have the AppData structure passed */
 	gtk_action_group_add_actions(app->agMain, actionsPlain, G_N_ELEMENTS(actionsPlain), app);
@@ -132,7 +139,7 @@ static void createMainMenu(GtkWidget* window, AppData* app)
 	error = NULL;
 	if (!gtk_ui_manager_add_ui_from_file(ui_manager, "celestiaui.xml", &error))
 	{
-		g_message("Building menus failed: %s", error->message);
+		g_message(_("Building menus failed: %s"), error->message);
 		g_error_free(error);
 		exit(EXIT_FAILURE);
 	}
@@ -223,7 +230,7 @@ static void initRealize(GtkWidget* widget, AppData* app)
 {
 	if (!app->core->initRenderer())
 	{
-		cerr << "Failed to initialize renderer.\n";
+		cerr << _("Failed to initialize renderer.\n");
 	}
 
 	/* Read/Apply Settings */
@@ -285,16 +292,30 @@ int main(int argc, char* argv[])
 	/* Watcher enables sending signals from inside of core */
 	GtkWatcher* gtkWatcher;
 
+	/* Force number displays into C locale. */
+	setlocale(LC_ALL, ""); 
+	setlocale(LC_NUMERIC, "C"); 
+
+	#ifndef WIN32
+	// Gettext integration
+	bindtextdomain(PACKAGE, LOCALEDIR);
+	bind_textdomain_codeset(PACKAGE, "UTF-8"); 
+	bindtextdomain(PACKAGE "_constellations", LOCALEDIR);
+	bind_textdomain_codeset(PACKAGE "_constellations", "UTF-8"); 
+	textdomain(PACKAGE); 
+	#endif /* WIN32 */
+
+
 	/* Command line option parsing */
 	GError *error = NULL;
 	GOptionContext* context = g_option_context_new("");
-	g_option_context_add_main_entries(context, optionEntries, NULL);
+	g_option_context_add_main_entries(context, optionEntries, PACKAGE);
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 	g_option_context_parse(context, &argc, &argv, &error);
 
 	if (error != NULL)
 	{
-		g_print("Error in command line options. Use --help for full list.\n");
+		g_print(_("Error in command line options. Use --help for full list.\n"));
 		exit(1);
 	}
 	
@@ -311,7 +332,7 @@ int main(int argc, char* argv[])
 		installDir = (gchar*)CONFIG_DATA_DIR;
 
 	if (chdir(installDir) == -1)
-		cerr << "Cannot chdir to '" << installDir << "', probably due to improper installation.\n";
+		cerr << _("Cannot chdir to '") << installDir << _("', probably due to improper installation.\n");
 
 	#ifdef GNOME
 	/* GNOME Initialization */
@@ -325,24 +346,14 @@ int main(int argc, char* argv[])
 
 	/* Turn on the splash screen */
 	SplashData* ss = splashStart(app, !noSplash);
-	splashSetText(ss, "Initializing...");
+	splashSetText(ss, _("Initializing..."));
 
 	SetDebugVerbosity(0);
-
-	/* Force number displays into C locale. */
-	setlocale(LC_NUMERIC, "C");
-	setlocale(LC_ALL, "");
-
-	#ifndef WIN32
-	bindtextdomain(PACKAGE, LOCALEDIR);
-	bind_textdomain_codeset(PACKAGE, "UTF-8");
-	textdomain(PACKAGE);
-	#endif /* WIN32 */
 
 	app->core = new CelestiaCore();
 	if (app->core == NULL)
 	{
-		cerr << "Failed to initialize Celestia core.\n";
+		cerr << _("Failed to initialize Celestia core.\n");
 		return 1;
 	}
 
@@ -377,11 +388,11 @@ int main(int argc, char* argv[])
 	
 	#ifdef GNOME
 	/* Create the main window (GNOME) */
-	app->mainWindow = gnome_app_new("Celestia", "Celestia");
+	app->mainWindow = gnome_app_new("Celestia", _("Celestia"));
 	#else
 	/* Create the main window (GTK) */
 	app->mainWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(app->mainWindow), "Celestia");
+	gtk_window_set_title(GTK_WINDOW(app->mainWindow), _("Celestia"));
 	#endif /* GNOME */
 
 	/* Set pointer to AppData structure. This is for when a function is in a
@@ -403,15 +414,15 @@ int main(int argc, char* argv[])
 
 	if (glconfig == NULL)
 	{
-		g_print("*** Cannot find the double-buffered visual.\n");
-		g_print("*** Trying single-buffered visual.\n");
+		g_print(_("*** Cannot find the double-buffered visual.\n"));
+		g_print(_("*** Trying single-buffered visual.\n"));
 
 		/* Try single-buffered visual */
 		glconfig = gdk_gl_config_new_by_mode(static_cast<GdkGLConfigMode>
 		                                     (GDK_GL_MODE_RGB | GDK_GL_MODE_DEPTH));
 		if (glconfig == NULL)
 		{
-			g_print ("*** No appropriate OpenGL-capable visual found.\n");
+			g_print (_("*** No appropriate OpenGL-capable visual found.\n"));
 			exit(1);
 		}
 	}
