@@ -3622,44 +3622,7 @@ void Renderer::renderObjectAsPoint(const Vector3f& position,
         // object, and on a plane normal to the view direction.
         center = center + direction * (radius / (m * Vector3f::UnitZ()).dot(direction));
 
-        glEnable(GL_DEPTH_TEST);
-#if !defined(NO_MAX_POINT_SIZE)
-        // TODO: OpenGL appears to limit the max point size unless we
-        // actually set up a shader that writes the pointsize values. To get
-        // around this, we'll use billboards.
-        Vector3f v0 = m * Vector3f(-1, -1, 0);
-        Vector3f v1 = m * Vector3f( 1, -1, 0);
-        Vector3f v2 = m * Vector3f( 1,  1, 0);
-        Vector3f v3 = m * Vector3f(-1,  1, 0);
-        float distanceAdjust = pixelSize * center.norm() * 0.5f;
-
-        if (starStyle == PointStars)
-        {
-            glDisable(GL_TEXTURE_2D);
-            glBegin(GL_POINTS);
-            glColor(color, alpha);
-            glVertex(center);
-            glEnd();
-            glEnable(GL_TEXTURE_2D);
-        }
-        else
-        {
-            gaussianDiscTex->bind();
-
-            pointSize *= distanceAdjust;
-            glBegin(GL_QUADS);
-            glColor(color, alpha);
-            glTexCoord2f(0, 1);
-            glVertex(center + (v0 * pointSize));
-            glTexCoord2f(1, 1);
-            glVertex(center + (v1 * pointSize));
-            glTexCoord2f(1, 0);
-            glVertex(center + (v2 * pointSize));
-            glTexCoord2f(0, 0);
-            glVertex(center + (v3 * pointSize));
-            glEnd();
-        }
-
+        pointStarVertexBuffer->addStar(center, {color, alpha}, pointSize);
         // If the object is brighter than magnitude 1, add a halo around it to
         // make it appear more brilliant.  This is a hack to compensate for the
         // limited dynamic range of monitors.
@@ -3668,53 +3631,8 @@ void Renderer::renderObjectAsPoint(const Vector3f& position,
         // with halos.
         if (useHalos && glareAlpha > 0.0f)
         {
-            gaussianGlareTex->bind();
-
-            glareSize *= distanceAdjust;
-            glBegin(GL_QUADS);
-            glColor(color, glareAlpha);
-            glTexCoord2f(0, 1);
-            glVertex(center + (v0 * glareSize));
-            glTexCoord2f(1, 1);
-            glVertex(center + (v1 * glareSize));
-            glTexCoord2f(1, 0);
-            glVertex(center + (v2 * glareSize));
-            glTexCoord2f(0, 0);
-            glVertex(center + (v3 * glareSize));
-            glEnd();
+            glareVertexBuffer->addStar(center, {color, glareAlpha}, glareSize);
         }
-#else
-        // Disabled because of point size limits
-        glEnable(GL_POINT_SPRITE);
-        glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-
-        gaussianDiscTex->bind();
-        glColor(color, alpha);
-        glPointSize(pointSize);
-        glBegin(GL_POINTS);
-        glVertex(center);
-        glEnd();
-
-        // If the object is brighter than magnitude 1, add a halo around it to
-        // make it appear more brilliant.  This is a hack to compensate for the
-        // limited dynamic range of monitors.
-        //
-        // TODO: Stars look fine but planets look unrealistically bright
-        // with halos.
-        if (useHalos && glareAlpha > 0.0f)
-        {
-            gaussianGlareTex->bind();
-
-            glColor(color, glareAlpha);
-            glPointSize(glareSize);
-            glBegin(GL_POINTS);
-            glVertex(center);
-            glEnd();
-        }
-
-        glDisable(GL_POINT_SPRITE);
-        glDisable(GL_DEPTH_TEST);
-#endif // NO_MAX_POINT_SIZE
     }
 }
 
